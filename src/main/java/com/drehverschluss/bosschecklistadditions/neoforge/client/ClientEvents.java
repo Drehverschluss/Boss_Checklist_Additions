@@ -1,5 +1,6 @@
 package com.drehverschluss.bosschecklistadditions.neoforge.client;
 
+import com.drehverschluss.bosschecklistadditions.client.ClientBossDropsCache;
 import com.drehverschluss.bosschecklistadditions.client.ClientBossStatsCache;
 import com.drehverschluss.bosschecklistadditions.client.PackInfoTab;
 
@@ -19,6 +20,7 @@ public final class ClientEvents {
 
     private static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientBossStatsCache.clear();
+        ClientBossDropsCache.clear();
     }
 
     private static void onMouseScrolled(ScreenEvent.MouseScrolled.Pre event) {

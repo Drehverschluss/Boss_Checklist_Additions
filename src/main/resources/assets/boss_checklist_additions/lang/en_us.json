@@ -30,7 +30,9 @@
   "boss_checklist_additions.configuration.hideMissingEntities": "Hide missing entities",
   "boss_checklist_additions.configuration.replaceStats": "Replace boss stats",
   "boss_checklist_additions.configuration.showPackInfoTab": "Show Pack Info tab",
+  "boss_checklist_additions.configuration.replaceDrops": "Replace boss drops",
   "boss_checklist_additions.configuration.observeBaseValues": "Observe base values",
   "boss_checklist_additions.configuration.enableDungeonDifficulty": "Include Dungeon Difficulty",
-  "boss_checklist_additions.configuration.debugLogging": "Debug logging"
+  "boss_checklist_additions.configuration.debugLogging": "Debug logging",
+  "boss_checklist_additions.configuration.cacheDrops": "Cache boss drops"
 }

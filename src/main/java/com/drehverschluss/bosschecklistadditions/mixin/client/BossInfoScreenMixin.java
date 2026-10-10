@@ -1,6 +1,9 @@
 package com.drehverschluss.bosschecklistadditions.mixin.client;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,9 +15,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import com.drehverschluss.bosschecklistadditions.client.BossInfoAccess;
+import com.drehverschluss.bosschecklistadditions.client.ClientBossDropsCache;
 import com.drehverschluss.bosschecklistadditions.client.ClientBossStatsCache;
+import com.drehverschluss.bosschecklistadditions.client.DropsText;
 import com.drehverschluss.bosschecklistadditions.client.PackInfoTab;
 import com.drehverschluss.bosschecklistadditions.client.StatsText;
+import com.drehverschluss.bosschecklistadditions.core.BossDrop;
+import com.drehverschluss.bosschecklistadditions.core.BossDrops;
 import com.drehverschluss.bosschecklistadditions.core.BossStats;
 import com.drehverschluss.bosschecklistadditions.mixin.MixinSupport;
 import com.drehverschluss.bosschecklistadditions.core.Settings;
@@ -47,11 +54,19 @@ public abstract class BossInfoScreenMixin extends Screen {
     private List<Component> tooltip_health;
     @Shadow
     private Component descriptionText;
+    @Shadow
+    private List<String> drops;
 
     @Unique
     private boolean bca$packInfoOpen;
     @Unique
     private Component bca$savedDescription;
+    // Boss Checklist's own list, captured once before we ever touch the drops field.
+    @Unique
+    private List<String> bca$originalDrops;
+    // The ClientBossDropsCache version our current drops field was built from, to notice later updates.
+    @Unique
+    private int bca$dropsVersion = -1;
 
     protected BossInfoScreenMixin(Component title) {
         super(title);
@@ -84,6 +99,67 @@ public abstract class BossInfoScreenMixin extends Screen {
         } catch (Throwable t) {
             MixinSupport.warnOnce("BossInfoScreen.initializeHealthTooltip", t);
         }
+    }
+
+    // Boss Checklist's own drop list is a static, hand-maintained guess, and some mods give drops in code instead
+    // of through the loot table (e.g. the Wither's Nether Star), which the simulation can never see. So instead of
+    // replacing the list, the simulated drops (if any) come first, followed by every original entry whose item is
+    // not already simulated - those get a "?" label if they did not already have one of their own.
+    @Inject(method = "initializeDrops", at = @At("TAIL"), require = 0)
+    private void bca$replaceDrops(CallbackInfo ci) {
+        try {
+            if (bca$originalDrops == null) {
+                bca$originalDrops = List.copyOf(drops);
+            }
+            drops = bca$mergedDrops();
+            bca$dropsVersion = ClientBossDropsCache.version();
+        } catch (Throwable t) {
+            MixinSupport.warnOnce("BossInfoScreen.initializeDrops", t);
+        }
+    }
+
+    // Boss Checklist only fills the drops list once (initializeDrops), a click on the tab does not reload it.
+    // Since the simulation keeps trickling in results after the screen was opened, this refreshes the merged
+    // list whenever the client cache changed since it was last built, so the tab updates without reopening it.
+    @Inject(method = "renderDrops", at = @At("HEAD"), require = 0)
+    private void bca$refreshDrops(GuiGraphics guiGraphics, int mouseX, int mouseY, int x, int y, CallbackInfo ci) {
+        try {
+            if (bca$originalDrops == null) {
+                return;
+            }
+            int version = ClientBossDropsCache.version();
+            if (version != bca$dropsVersion) {
+                drops = bca$mergedDrops();
+                bca$dropsVersion = version;
+            }
+        } catch (Throwable t) {
+            MixinSupport.warnOnce("BossInfoScreen.renderDrops", t);
+        }
+    }
+
+    @Unique
+    private List<String> bca$mergedDrops() {
+        if (!Settings.replaceDrops()) {
+            return bca$originalDrops;
+        }
+        BossDrops real = ClientBossDropsCache.get(boss.id());
+        if (real == null || real.drops().isEmpty()) {
+            return bca$originalDrops;
+        }
+        List<String> merged = new ArrayList<>(real.drops().size() + bca$originalDrops.size());
+        Set<String> usedIds = new HashSet<>();
+        for (BossDrop drop : real.drops()) {
+            merged.add(drop.itemId() + "#" + DropsText.label(drop));
+            usedIds.add(drop.itemId());
+        }
+        for (String original : bca$originalDrops) {
+            int hash = original.indexOf('#');
+            String itemId = hash < 0 ? original : original.substring(0, hash);
+            if (usedIds.add(itemId)) {
+                merged.add(hash < 0 ? original + "#?" : original);
+            }
+        }
+        return merged;
     }
 
     // The Drop and Spawn buttons only set currentTab. Selecting one of them closes the Pack Info tab.

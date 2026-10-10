@@ -7,11 +7,15 @@ import java.util.Set;
 import com.drehverschluss.bosschecklistadditions.core.BaseValueObserver;
 import com.drehverschluss.bosschecklistadditions.core.BossPackDataManager;
 import com.drehverschluss.bosschecklistadditions.core.BossStats;
+import com.drehverschluss.bosschecklistadditions.core.LootResourcesFingerprint;
+import com.drehverschluss.bosschecklistadditions.core.ServerBossDropsCache;
 import com.drehverschluss.bosschecklistadditions.core.ServerBossStatsCache;
+import com.drehverschluss.bosschecklistadditions.core.network.BossDropsPayload;
 import com.drehverschluss.bosschecklistadditions.core.network.BossStatsPayload;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.event.AddReloadListenerEvent;
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -19,7 +23,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class ServerEvents {
     private ServerEvents() {
@@ -31,12 +34,17 @@ public final class ServerEvents {
 
     public static void onServerStarted(ServerStartedEvent event) {
         StatsService.recalculateAll(event.getServer());
+        DropsService.restart(event.getServer());
     }
 
     public static void onServerStopped(ServerStoppedEvent event) {
         ServerBossStatsCache.clear();
+        ServerBossDropsCache.clear();
+        DropsService.stop();
         BossPackDataManager.clear();
+        LootResourcesFingerprint.clear();
         BaseValueObserver.clear();
+        FakePlayerFactory.unloadLevel(event.getServer().overworld());
     }
 
     // Fires with a null player on /reload, after all data (including the pack files) has been reloaded.
@@ -45,13 +53,20 @@ public final class ServerEvents {
             return;
         }
         StatsService.recalculateAll(event.getPlayerList().getServer());
-        BossStatsPayload payload = new BossStatsPayload(ServerBossStatsCache.get());
-        event.getRelevantPlayers().forEach(player -> PacketDistributor.sendToPlayer(player, payload));
+        BossStatsPayload statsPayload = new BossStatsPayload(ServerBossStatsCache.get());
+        // Drops are requeued and trickle in via BossDropsUpdatePayload; players get the (possibly stale) snapshot now.
+        BossDropsPayload dropsPayload = new BossDropsPayload(ServerBossDropsCache.get());
+        event.getRelevantPlayers().forEach(player -> {
+            Net.send(player, statsPayload);
+            Net.send(player, dropsPayload);
+        });
+        DropsService.restart(event.getPlayerList().getServer());
     }
 
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             StatsService.sendAll(player);
+            DropsService.sendAll(player);
         }
     }
 
@@ -66,6 +81,8 @@ public final class ServerEvents {
     }
 
     public static void onServerTick(ServerTickEvent.Post event) {
+        DropsService.tick(event.getServer());
+
         Set<String> changed = BaseValueObserver.process(event.getServer());
         if (changed.isEmpty()) {
             return;
@@ -77,6 +94,6 @@ public final class ServerEvents {
                 updated.add(stats);
             }
         }
-        StatsService.broadcastUpdate(updated);
+        StatsService.broadcastUpdate(event.getServer(), updated);
     }
 }

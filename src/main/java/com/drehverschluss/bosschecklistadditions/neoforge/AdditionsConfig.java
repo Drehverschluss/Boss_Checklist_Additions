@@ -25,6 +25,11 @@ public final class AdditionsConfig {
             .translation("boss_checklist_additions.configuration.showPackInfoTab")
             .define("showPackInfoTab", true);
 
+    private static final ModConfigSpec.BooleanValue REPLACE_DROPS = CLIENT_BUILDER
+            .comment("Replace the drops shown in the boss info screen with the real drops of its loot table (solo, no Looting), with their chance.")
+            .translation("boss_checklist_additions.configuration.replaceDrops")
+            .define("replaceDrops", true);
+
     public static final ModConfigSpec CLIENT_SPEC = CLIENT_BUILDER.build();
 
     private static final ModConfigSpec.Builder SERVER_BUILDER = new ModConfigSpec.Builder();
@@ -45,6 +50,12 @@ public final class AdditionsConfig {
             .translation("boss_checklist_additions.configuration.debugLogging")
             .define("debugLogging", false);
 
+    private static final ModConfigSpec.BooleanValue CACHE_DROPS = SERVER_BUILDER
+            .comment("Save simulated boss drops and reuse them on the next start/reload while mods, datapacks and loot tables stay the same.",
+                    "false: always simulate again. A config file of another mod is not detected, use /bcadditions drops refresh after changing one.")
+            .translation("boss_checklist_additions.configuration.cacheDrops")
+            .define("cacheDrops", true);
+
     public static final ModConfigSpec SERVER_SPEC = SERVER_BUILDER.build();
 
     private AdditionsConfig() {
@@ -63,13 +74,14 @@ public final class AdditionsConfig {
 
     private static void apply(Object spec) {
         if (spec == CLIENT_SPEC) {
-            Settings.setClient(HIDE_MISSING_ENTITIES.get(), REPLACE_STATS.get(), SHOW_PACK_INFO_TAB.get());
+            Settings.setClient(HIDE_MISSING_ENTITIES.get(), REPLACE_STATS.get(), SHOW_PACK_INFO_TAB.get(), REPLACE_DROPS.get());
         } else if (spec == SERVER_SPEC) {
-            Settings.setServer(OBSERVE_BASE_VALUES.get(), ENABLE_DUNGEON_DIFFICULTY.get(), DEBUG_LOGGING.get());
+            Settings.setServer(OBSERVE_BASE_VALUES.get(), ENABLE_DUNGEON_DIFFICULTY.get(), DEBUG_LOGGING.get(), CACHE_DROPS.get());
         }
     }
 
     // The config file is reloaded on another thread, the stats have to be recalculated on the server thread.
+    // The drops do not depend on any server option, so they are not requeued here.
     private static void recalculateLater() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {

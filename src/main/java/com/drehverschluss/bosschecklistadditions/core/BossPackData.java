@@ -1,7 +1,9 @@
 package com.drehverschluss.bosschecklistadditions.core;
 
+import java.util.List;
 import java.util.Optional;
 
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
@@ -17,14 +19,21 @@ public record BossPackData(
         Optional<ResourceLocation> dimension,
         Optional<Location> location,
         Optional<BaseAttributes> baseAttributes,
-        boolean hidden) {
+        boolean hidden,
+        List<ResourceLocation> lootTables) {
+
+    // Accepts a single id or a list, so a pack author does not have to wrap a single override in brackets.
+    private static final Codec<List<ResourceLocation>> LOOT_TABLES_CODEC = Codec.either(ResourceLocation.CODEC, ResourceLocation.CODEC.listOf())
+            .xmap(either -> either.map(List::of, list -> list),
+                    list -> list.size() == 1 ? Either.left(list.get(0)) : Either.right(list));
 
     public static final Codec<BossPackData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("entity").forGetter(BossPackData::entity),
             ResourceLocation.CODEC.optionalFieldOf("dimension").forGetter(BossPackData::dimension),
             Location.CODEC.optionalFieldOf("location").forGetter(BossPackData::location),
             BaseAttributes.CODEC.optionalFieldOf("base_attributes").forGetter(BossPackData::baseAttributes),
-            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(BossPackData::hidden))
+            Codec.BOOL.optionalFieldOf("hidden", false).forGetter(BossPackData::hidden),
+            LOOT_TABLES_CODEC.optionalFieldOf("loot_tables", List.of()).forGetter(BossPackData::lootTables))
             .apply(instance, BossPackData::new));
 
     public record Location(LocationType type, Optional<ResourceLocation> id) {

@@ -59,5 +59,8 @@ public final class BossPackDataManager extends SimpleJsonResourceReloadListener 
         }
         data = Map.copyOf(loaded);
         Constants.debug("Loaded {} boss pack files", data.size());
+        // Reuses this reload's ResourceManager, since Global Loot Modifiers and LootIntegrations files are
+        // not covered by anything else that is recomputed on reload.
+        LootResourcesFingerprint.recompute(resourceManager);
     }
 }

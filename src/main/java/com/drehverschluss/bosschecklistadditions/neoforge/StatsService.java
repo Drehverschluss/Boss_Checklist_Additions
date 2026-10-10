@@ -19,7 +19,6 @@ import com.drehverschluss.bosschecklistadditions.core.network.BossStatsUpdatePay
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.ModList;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 /** Calculates the boss stats and keeps the server cache and the clients up to date. */
 public final class StatsService {
@@ -37,7 +36,7 @@ public final class StatsService {
 
     public static void recalculateAndBroadcast(MinecraftServer server) {
         recalculateAll(server);
-        PacketDistributor.sendToAllPlayers(new BossStatsPayload(ServerBossStatsCache.get()));
+        Net.broadcast(server, new BossStatsPayload(ServerBossStatsCache.get()));
     }
 
     /** Recalculates one boss and updates the cache. Returns null if the boss has no stats (hidden, unknown, failed). */
@@ -49,18 +48,19 @@ public final class StatsService {
     }
 
     public static void sendAll(ServerPlayer player) {
-        PacketDistributor.sendToPlayer(player, new BossStatsPayload(ServerBossStatsCache.get()));
+        Net.send(player, new BossStatsPayload(ServerBossStatsCache.get()));
     }
 
-    public static void broadcastUpdate(List<BossStats> updated) {
+    public static void broadcastUpdate(MinecraftServer server, List<BossStats> updated) {
         if (!updated.isEmpty()) {
-            PacketDistributor.sendToAllPlayers(new BossStatsUpdatePayload(updated));
+            Net.broadcast(server, new BossStatsUpdatePayload(updated));
         }
     }
 
     // The Dynamic Difficulty and Dungeon Difficulty classes are only touched if the mods are loaded.
+    // Package-private: LootDropsCalculator reuses this to apply the same level range to its simulated entity.
     @Nullable
-    private static LevelScaler createScaler() {
+    static LevelScaler createScaler() {
         if (ModList.get().isLoaded(Constants.DYNAMIC_DIFFICULTY_ID)) {
             return new DynamicDifficultyScaler();
         }

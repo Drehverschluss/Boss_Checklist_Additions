@@ -5,10 +5,13 @@ import java.util.Locale;
 import java.util.Map;
 
 import com.drehverschluss.bosschecklistadditions.core.BaseAttributes;
+import com.drehverschluss.bosschecklistadditions.core.BossDrop;
+import com.drehverschluss.bosschecklistadditions.core.BossDrops;
 import com.drehverschluss.bosschecklistadditions.core.BossLocation;
 import com.drehverschluss.bosschecklistadditions.core.BossStats;
 import com.drehverschluss.bosschecklistadditions.core.Constants;
 import com.drehverschluss.bosschecklistadditions.core.ObservedBaseValues;
+import com.drehverschluss.bosschecklistadditions.core.ServerBossDropsCache;
 import com.drehverschluss.bosschecklistadditions.core.ServerBossStatsCache;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
@@ -41,6 +44,8 @@ public final class DebugCommand {
         dispatcher.register(Commands.literal("bcadditions")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("dump").executes(DebugCommand::dump))
+                .then(Commands.literal("drops").executes(DebugCommand::drops)
+                        .then(Commands.literal("refresh").executes(DebugCommand::dropsRefresh)))
                 .then(Commands.literal("observed").executes(DebugCommand::observed))
                 .then(Commands.literal("compare").executes(DebugCommand::compare))
                 .then(Commands.literal("forget")
@@ -65,6 +70,33 @@ public final class DebugCommand {
             send(source, line);
         }
         return stats.size();
+    }
+
+    private static int drops(CommandContext<CommandSourceStack> context) {
+        List<BossDrops> drops = ServerBossDropsCache.get();
+        CommandSourceStack source = context.getSource();
+        if (!DropsScheduler.isIdle()) {
+            send(source, "Still simulating, " + DropsScheduler.queueSize() + " boss(es) queued.");
+        }
+        if (drops.isEmpty()) {
+            send(source, "No boss drops simulated yet.");
+            return 0;
+        }
+
+        send(source, "Boss drops (" + drops.size() + " bosses, solo, no Looting):");
+        for (BossDrops entry : drops) {
+            String line = format(entry);
+            Constants.LOGGER.info(line);
+            send(source, line);
+        }
+        return drops.size();
+    }
+
+    private static int dropsRefresh(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        DropsService.refresh(source.getServer());
+        send(source, "Discarded the saved boss drops, simulating everything again.");
+        return 1;
     }
 
     private static int observed(CommandContext<CommandSourceStack> context) {
@@ -95,7 +127,7 @@ public final class DebugCommand {
 
         BossStats stats = StatsService.recalculateOne(source.getServer(), id);
         if (stats != null) {
-            StatsService.broadcastUpdate(List.of(stats));
+            StatsService.broadcastUpdate(source.getServer(), List.of(stats));
         }
         send(source, "Forgot the observed base values of " + id);
         return 1;
@@ -116,6 +148,25 @@ public final class DebugCommand {
                 s.zone().map(zone -> String.format("Zone %s %d (entity %d, loot %s)", zone.typeKey(), zone.level(), zone.entityLevel(),
                         zone.allowLoot() ? String.valueOf(zone.rewardLevel()) : "-")).orElse("no zone"),
                 s.dungeonScaled() ? "applied" : "not applied");
+    }
+
+    private static String format(BossDrops drops) {
+        StringBuilder line = new StringBuilder(drops.entityId());
+        if (drops.drops().isEmpty()) {
+            return line.append(" | no drops").toString();
+        }
+        for (BossDrop drop : drops.drops()) {
+            String amount = drop.minCount() == drop.maxCount() ? String.valueOf(drop.minCount()) : drop.minCount() + "-" + drop.maxCount();
+            line.append(String.format(Locale.ROOT, " | %s %s x%s", drop.itemId(), percent(drop.chance()), amount));
+        }
+        return line.toString();
+    }
+
+    // Rounding to a whole percent would show "0%" for anything under 0.5%, which reads as "never happens"
+    // even though the drop is real, just rare.
+    private static String percent(double chance) {
+        double percent = chance * 100.0;
+        return percent < 0.5 ? "<1%" : String.format(Locale.ROOT, "%.0f%%", percent);
     }
 
     private static String location(BossLocation location) {
