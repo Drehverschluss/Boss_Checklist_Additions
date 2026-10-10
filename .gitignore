@@ -38,3 +38,11 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+### Local mod jars ###
+libs/**/*.jar
+
+### Interne Dateien ###
+Curseforge Sachen/
+BossChecklistAdditions-*.md
+BossChecklistAdditions-*.txt

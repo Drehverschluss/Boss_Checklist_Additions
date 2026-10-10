@@ -1,0 +1,16 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.drehverschluss.bosschecklistadditions.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ServerBossIdsLoaderMixin"
+  ],
+  "client": [
+    "client.BossInfoScreenMixin",
+    "client.BossRegistryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

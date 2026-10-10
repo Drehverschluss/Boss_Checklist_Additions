@@ -1,0 +1,36 @@
+{
+  "tooltip.boss_checklist_additions.base": "(Base %s)",
+  "tooltip.boss_checklist_additions.level_solo": "Lvl %s \u00b7 Solo",
+  "tooltip.boss_checklist_additions.solo": "Solo",
+
+  "gui.boss_checklist_additions.pack_info": "Pack Info",
+  "gui.boss_checklist_additions.strength": "Strength",
+  "gui.boss_checklist_additions.level": "Level",
+  "gui.boss_checklist_additions.level_fixed": "%s (fixed)",
+  "gui.boss_checklist_additions.level_by_location": "depends on location",
+  "gui.boss_checklist_additions.health": "Health",
+  "gui.boss_checklist_additions.armor": "Armor",
+  "gui.boss_checklist_additions.attack": "Attack",
+  "gui.boss_checklist_additions.base": "Base %s",
+  "gui.boss_checklist_additions.note.solo": "Solo",
+  "gui.boss_checklist_additions.note.base_pack": "Base: Pack",
+  "gui.boss_checklist_additions.note.base_observed": "Base: Observed",
+  "gui.boss_checklist_additions.note.dungeon_difficulty": "incl. Dungeon Difficulty",
+  "gui.boss_checklist_additions.location": "Location",
+  "gui.boss_checklist_additions.place.summoned": "Summoned",
+  "gui.boss_checklist_additions.place.natural": "Roams freely",
+  "gui.boss_checklist_additions.loot": "Loot %s",
+  "gui.boss_checklist_additions.no_server_data": "No server data \u2013 Boss Checklist Additions is not installed on the server.",
+
+  "boss_checklist_additions.dimension.minecraft.overworld": "Overworld",
+  "boss_checklist_additions.dimension.minecraft.the_nether": "The Nether",
+  "boss_checklist_additions.dimension.minecraft.the_end": "The End",
+
+  "boss_checklist_additions.configuration.title": "Boss Checklist Additions",
+  "boss_checklist_additions.configuration.hideMissingEntities": "Hide missing entities",
+  "boss_checklist_additions.configuration.replaceStats": "Replace boss stats",
+  "boss_checklist_additions.configuration.showPackInfoTab": "Show Pack Info tab",
+  "boss_checklist_additions.configuration.observeBaseValues": "Observe base values",
+  "boss_checklist_additions.configuration.enableDungeonDifficulty": "Include Dungeon Difficulty",
+  "boss_checklist_additions.configuration.debugLogging": "Debug logging"
+}
