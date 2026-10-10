@@ -14,7 +14,7 @@ import net.minecraft.server.packs.resources.ResourceManager;
 
 /**
  * A hash over the content of every resource under {@code data/<any namespace>/loot_modifiers/} and
- * {@code data/lootintegrations/} (any path). Global Loot Modifiers are not part of a loot table itself, and a
+ * {@code data/lootintegrations/loot/}. Global Loot Modifiers are not part of a loot table itself, and a
  * KubeJS pack's own id does not change when a file inside it changes, so neither is otherwise visible to the
  * per-boss drops cache fingerprint. Recomputed once per datapack reload, not per boss.
  */
@@ -36,7 +36,7 @@ public final class LootResourcesFingerprint {
         try {
             Map<ResourceLocation, Resource> resources = new TreeMap<>(Comparator.comparing(ResourceLocation::toString));
             resources.putAll(resourceManager.listResources("loot_modifiers", location -> true));
-            resources.putAll(resourceManager.listResources("", location -> location.getNamespace().equals("lootintegrations")));
+            resources.putAll(resourceManager.listResources("loot", location -> location.getNamespace().equals("lootintegrations")));
 
             MessageDigest digest = MessageDigest.getInstance("SHA-1");
             for (Map.Entry<ResourceLocation, Resource> entry : resources.entrySet()) {
