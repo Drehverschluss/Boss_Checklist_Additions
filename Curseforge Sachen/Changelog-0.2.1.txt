@@ -1,0 +1,13 @@
+Boss Checklist Additions 0.2.1
+NeoForge 1.21.1 | requires Boss Checklist 5.3.x | client & server
+
+*LAG FIX: DROP SIMULATION*
+- Fixed heavy server lag while simulating drops when the world spawn was far from 0/0.
+- The simulated boss and player are now placed together in a loaded chunk without structure references, near the world spawn or next to a player.
+- Location-based loot modifiers such as Dungeon Difficulty now see open land, avoiding repeated biome and structure calculations in an unrelated unloaded chunk.
+- The simulation waits while the server is overloaded and uses a time account, so it never adds more than a few milliseconds per tick on average.
+- Slow trials are reported in the server log so expensive loot tables can be identified.
+- The global minimum and maximum number of drop simulation trials can now be configured per world (defaults: 100-300).
+- Cached drop results are automatically recalculated once because the simulation behavior changed.
+
+Known limitation: the simulated chances remain an approximation from 100-300 solo kills without Looting. The simulated boss and player use the selected loaded, structure-free chunk as their location, which changes location-dependent item attributes but not which items drop.

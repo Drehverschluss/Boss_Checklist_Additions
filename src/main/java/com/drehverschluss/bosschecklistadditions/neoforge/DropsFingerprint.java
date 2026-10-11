@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.drehverschluss.bosschecklistadditions.core.Constants;
 import com.drehverschluss.bosschecklistadditions.core.LootResourcesFingerprint;
+import com.drehverschluss.bosschecklistadditions.core.Settings;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
@@ -30,7 +31,7 @@ import net.neoforged.fml.ModList;
 final class DropsFingerprint {
     // Bump this when the simulation itself changes in a way that could change its results (e.g. a different
     // random distribution, a different trial count), so old cached results are not trusted anymore.
-    private static final int SIMULATION_VERSION = 1;
+    private static final int SIMULATION_VERSION = 2;
 
     private static volatile String globalPart = "";
 
@@ -44,7 +45,8 @@ final class DropsFingerprint {
                 .sorted()
                 .collect(Collectors.joining(","));
         String datapacks = server.getPackRepository().getSelectedIds().stream().sorted().collect(Collectors.joining(","));
-        globalPart = "sim" + SIMULATION_VERSION + ";mods=" + mods + ";packs=" + datapacks;
+        globalPart = "sim" + SIMULATION_VERSION + ";mods=" + mods + ";packs=" + datapacks
+                + ";trials=" + Settings.minimumDropTrials() + ':' + Settings.maximumDropTrials();
     }
 
     /**

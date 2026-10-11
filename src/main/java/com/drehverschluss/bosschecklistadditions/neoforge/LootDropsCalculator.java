@@ -1,5 +1,6 @@
 package com.drehverschluss.bosschecklistadditions.neoforge;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -8,10 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.mojang.authlib.GameProfile;
 import com.drehverschluss.bosschecklistadditions.core.BossDrop;
 import com.drehverschluss.bosschecklistadditions.core.BossDrops;
 import com.drehverschluss.bosschecklistadditions.core.BossPackData;
@@ -20,6 +23,7 @@ import com.drehverschluss.bosschecklistadditions.core.Constants;
 import com.drehverschluss.bosschecklistadditions.core.LevelScaler;
 import com.drehverschluss.bosschecklistadditions.core.Settings;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -53,7 +57,7 @@ import net.neoforged.neoforge.common.util.FakePlayerFactory;
  * are rolled and summed together each trial, each with its own loot params restricted to what its own parameter
  * set actually allows.
  *
- * <p>Runs between {@value #MIN_TRIALS} and {@value #MAX_TRIALS} trials, stopping early once the result has
+ * <p>Runs between the configured minimum and maximum number of trials, stopping early once the result has
  * stopped changing (see {@link Session}), and skips the trials entirely if {@link DropsSavedData} already has a
  * result for the same fingerprint (see {@link DropsFingerprint}). One trial runs at a time, so that
  * {@link DropsScheduler} can spread the work, however slow a single loot table turns out to be, across many
@@ -61,13 +65,15 @@ import net.neoforged.neoforge.common.util.FakePlayerFactory;
  * lives here instead of core.
  */
 public final class LootDropsCalculator {
-    static final int MIN_TRIALS = 100;
-    static final int MAX_TRIALS = 300;
     private static final int STABILITY_CHECK_INTERVAL = 50;
     private static final double STABILITY_THRESHOLD = 0.02;
     // Boss Checklist draws the drops in a small 5-wide grid; a huge reference loot table (e.g. one that picks
     // from a pool of hundreds of possible items) is capped to the most likely ones instead of listing all of them.
     private static final int MAX_DISPLAYED_DROPS = 24;
+    private static final UUID DROPS_FAKE_PLAYER_UUID = UUID.nameUUIDFromBytes(
+            "boss_checklist_additions:drops".getBytes(StandardCharsets.UTF_8));
+    private static final GameProfile DROPS_FAKE_PLAYER_PROFILE =
+            new GameProfile(DROPS_FAKE_PLAYER_UUID, "[BossChecklistAdditions]");
 
     private static final Set<ResourceLocation> warnedMissingTables = ConcurrentHashMap.newKeySet();
 
@@ -102,6 +108,9 @@ public final class LootDropsCalculator {
         private int trialsDone;
         private long elapsedNanos;
         private int ticksUsed;
+        private boolean slowTrialWarned;
+        private final int minimumTrials;
+        private final int maximumTrials;
 
         @Nullable
         private final LevelScaler scaler;
@@ -109,14 +118,15 @@ public final class LootDropsCalculator {
         private final int levelMax;
         private int lastAppliedLevel = Integer.MIN_VALUE;
 
-        // The chances at the previous stability checkpoint (every STABILITY_CHECK_INTERVAL trials from MIN_TRIALS
-        // onward), to see whether the estimate is still moving. Null until the first checkpoint is reached.
+        // The chances at the previous stability checkpoint (every STABILITY_CHECK_INTERVAL trials from the
+        // configured minimum onward), to see whether the estimate is still moving. Null until the first checkpoint.
         @Nullable
         private Map<Item, Double> lastCheckpoint;
         private boolean stable;
 
         private Session(String id, @Nullable LivingEntity entity, List<Target> targets, @Nullable MinecraftServer server,
-                @Nullable String fingerprint, @Nullable LevelScaler scaler, int levelMin, int levelMax) {
+                @Nullable String fingerprint, @Nullable LevelScaler scaler, int levelMin, int levelMax,
+                int minimumTrials, int maximumTrials) {
             this.id = id;
             this.entity = entity;
             this.targets = targets;
@@ -126,6 +136,8 @@ public final class LootDropsCalculator {
             this.scaler = scaler;
             this.levelMin = levelMin;
             this.levelMax = levelMax;
+            this.minimumTrials = minimumTrials;
+            this.maximumTrials = maximumTrials;
         }
 
         private Session(String id, BossDrops cachedResult) {
@@ -138,10 +150,16 @@ public final class LootDropsCalculator {
             this.scaler = null;
             this.levelMin = -1;
             this.levelMax = -1;
+            this.minimumTrials = 0;
+            this.maximumTrials = 0;
         }
 
         boolean isFromCache() {
             return cachedResult != null;
+        }
+
+        String id() {
+            return id;
         }
 
         int trialsDone() {
@@ -160,7 +178,15 @@ public final class LootDropsCalculator {
             ticksUsed++;
         }
 
-        void runOneTrial() {
+        boolean markSlowTrialWarned() {
+            if (slowTrialWarned) {
+                return false;
+            }
+            slowTrialWarned = true;
+            return true;
+        }
+
+        long runOneTrial() {
             long start = System.nanoTime();
             applyLevelForTrial();
             perTrial.clear();
@@ -180,14 +206,16 @@ public final class LootDropsCalculator {
             }
             trialsDone++;
             checkStability();
-            elapsedNanos += System.nanoTime() - start;
+            long trialNanos = System.nanoTime() - start;
+            elapsedNanos += trialNanos;
+            return trialNanos;
         }
 
-        // From MIN_TRIALS trials onward, every STABILITY_CHECK_INTERVAL trials: if no item newly appeared and no
+        // From the configured minimum onward, every STABILITY_CHECK_INTERVAL trials: if no item newly appeared and no
         // chance moved by more than STABILITY_THRESHOLD since the previous checkpoint, the estimate has settled
-        // and the remaining trials (up to MAX_TRIALS) are very unlikely to change the result worth waiting for.
+        // and the remaining trials are very unlikely to change the result worth waiting for.
         private void checkStability() {
-            if (trialsDone < MIN_TRIALS || (trialsDone - MIN_TRIALS) % STABILITY_CHECK_INTERVAL != 0) {
+            if (trialsDone < minimumTrials || (trialsDone - minimumTrials) % STABILITY_CHECK_INTERVAL != 0) {
                 return;
             }
             Map<Item, Double> current = new HashMap<>();
@@ -224,7 +252,7 @@ public final class LootDropsCalculator {
         }
 
         boolean isDone() {
-            return cachedResult != null || stable || trialsDone >= MAX_TRIALS;
+            return cachedResult != null || stable || trialsDone >= maximumTrials;
         }
 
         /** Discards the temporary entity (if any) and builds the result. Must only be called once, after isDone(). */
@@ -285,9 +313,9 @@ public final class LootDropsCalculator {
 
     /** Returns null for hidden bosses, unknown entity types and bosses without a resolvable loot table. Never runs a trial. */
     @Nullable
-    static Session prepare(String id, MinecraftServer server) {
+    static Session prepare(String id, MinecraftServer server, BlockPos origin) {
         try {
-            return prepareOrThrow(id, server);
+            return prepareOrThrow(id, server, origin);
         } catch (Throwable t) {
             Constants.LOGGER.warn("Could not prepare boss drops for '{}'", id, t);
             return null;
@@ -295,7 +323,7 @@ public final class LootDropsCalculator {
     }
 
     @Nullable
-    private static Session prepareOrThrow(String id, MinecraftServer server) {
+    private static Session prepareOrThrow(String id, MinecraftServer server, BlockPos origin) {
         BossPackData pack = BossPackDataManager.get(id);
         if (pack != null && pack.hidden()) {
             return null;
@@ -318,10 +346,13 @@ public final class LootDropsCalculator {
             }
             return null;
         }
+        entity.moveTo(origin.getX() + 0.5, origin.getY(), origin.getZ() + 0.5);
+        FakePlayer player = FakePlayerFactory.get(level, DROPS_FAKE_PLAYER_PROFILE);
+        player.moveTo(origin.getX() + 0.5, origin.getY(), origin.getZ() + 0.5);
 
         List<Target> targets = pack != null && !pack.lootTables().isEmpty()
-                ? resolveOverrideTargets(id, pack.lootTables(), server, level, entity)
-                : resolveDefaultTarget(entity, server, level);
+                ? resolveOverrideTargets(id, pack.lootTables(), server, level, entity, player)
+                : resolveDefaultTarget(entity, server, level, player);
         if (targets == null) {
             entity.discard();
             return null;
@@ -357,18 +388,19 @@ public final class LootDropsCalculator {
             }
         }
 
-        return new Session(id, entity, targets, server, fingerprint, scaler, levelMin, levelMax);
+        return new Session(id, entity, targets, server, fingerprint, scaler, levelMin, levelMax,
+                Settings.minimumDropTrials(), Settings.maximumDropTrials());
     }
 
     /** The entity's own loot table. Returns null if it does not have one (e.g. it only hands out loot in code). */
     @Nullable
-    private static List<Target> resolveDefaultTarget(LivingEntity entity, MinecraftServer server, ServerLevel level) {
+    private static List<Target> resolveDefaultTarget(LivingEntity entity, MinecraftServer server, ServerLevel level, FakePlayer player) {
         ResourceKey<LootTable> lootTableKey = entity.getLootTable();
         LootTable lootTable = server.reloadableRegistries().getLootTable(lootTableKey);
         if (lootTable == LootTable.EMPTY) {
             return null;
         }
-        return List.of(new Target(lootTable, buildParams(lootTable, level, entity)));
+        return List.of(new Target(lootTable, buildParams(lootTable, level, entity, player)));
     }
 
     /**
@@ -378,7 +410,7 @@ public final class LootDropsCalculator {
      */
     @Nullable
     private static List<Target> resolveOverrideTargets(String id, List<ResourceLocation> lootTableIds,
-            MinecraftServer server, ServerLevel level, LivingEntity entity) {
+            MinecraftServer server, ServerLevel level, LivingEntity entity, FakePlayer player) {
         List<Target> targets = new ArrayList<>(lootTableIds.size());
         for (ResourceLocation lootTableId : lootTableIds) {
             ResourceKey<LootTable> key = ResourceKey.create(Registries.LOOT_TABLE, lootTableId);
@@ -389,7 +421,7 @@ public final class LootDropsCalculator {
                 }
                 return null;
             }
-            targets.add(new Target(lootTable, buildParams(lootTable, level, entity)));
+            targets.add(new Target(lootTable, buildParams(lootTable, level, entity, player)));
         }
         return targets;
     }
@@ -397,7 +429,7 @@ public final class LootDropsCalculator {
     // A plain player attack without Looting: the same "solo, no bonus" baseline the rest of the addon uses.
     // Only the parameters the table's own parameter set actually allows are set, since LootParams.Builder.create()
     // throws for both a missing required parameter and one that is not allowed at all.
-    private static LootParams buildParams(LootTable lootTable, ServerLevel level, LivingEntity entity) {
+    private static LootParams buildParams(LootTable lootTable, ServerLevel level, LivingEntity entity, FakePlayer player) {
         LootContextParamSet declared = lootTable.getParamSet();
         // A table without an explicit "type" (some mods' own reward tables, e.g. Bosses of Mass Destruction's
         // chest loot) defaults to ALL_PARAMS, which also requires a block state/tool/explosion radius that make
@@ -413,7 +445,6 @@ public final class LootDropsCalculator {
         }
         if (paramSet.isAllowed(LootContextParams.DAMAGE_SOURCE) || paramSet.isAllowed(LootContextParams.ATTACKING_ENTITY)
                 || paramSet.isAllowed(LootContextParams.DIRECT_ATTACKING_ENTITY) || paramSet.isAllowed(LootContextParams.LAST_DAMAGE_PLAYER)) {
-            FakePlayer player = FakePlayerFactory.getMinecraft(level);
             if (paramSet.isAllowed(LootContextParams.DAMAGE_SOURCE)) {
                 DamageSource damageSource = level.damageSources().playerAttack(player);
                 builder.withParameter(LootContextParams.DAMAGE_SOURCE, damageSource);

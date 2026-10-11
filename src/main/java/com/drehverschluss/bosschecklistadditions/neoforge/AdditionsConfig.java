@@ -1,5 +1,6 @@
 package com.drehverschluss.bosschecklistadditions.neoforge;
 
+import com.drehverschluss.bosschecklistadditions.core.Constants;
 import com.drehverschluss.bosschecklistadditions.core.Settings;
 
 import net.minecraft.server.MinecraftServer;
@@ -56,6 +57,17 @@ public final class AdditionsConfig {
             .translation("boss_checklist_additions.configuration.cacheDrops")
             .define("cacheDrops", true);
 
+    private static final ModConfigSpec.IntValue MINIMUM_DROP_TRIALS = SERVER_BUILDER
+            .comment("Minimum number of trials simulated for every boss before the result may be considered stable.")
+            .translation("boss_checklist_additions.configuration.minimumDropTrials")
+            .defineInRange("minimumDropTrials", Settings.DEFAULT_MINIMUM_DROP_TRIALS, 1, Integer.MAX_VALUE);
+
+    private static final ModConfigSpec.IntValue MAXIMUM_DROP_TRIALS = SERVER_BUILDER
+            .comment("Maximum number of trials simulated for every boss.",
+                    "If this is lower than minimumDropTrials, minimumDropTrials is used for both values.")
+            .translation("boss_checklist_additions.configuration.maximumDropTrials")
+            .defineInRange("maximumDropTrials", Settings.DEFAULT_MAXIMUM_DROP_TRIALS, 1, Integer.MAX_VALUE);
+
     public static final ModConfigSpec SERVER_SPEC = SERVER_BUILDER.build();
 
     private AdditionsConfig() {
@@ -76,16 +88,26 @@ public final class AdditionsConfig {
         if (spec == CLIENT_SPEC) {
             Settings.setClient(HIDE_MISSING_ENTITIES.get(), REPLACE_STATS.get(), SHOW_PACK_INFO_TAB.get(), REPLACE_DROPS.get());
         } else if (spec == SERVER_SPEC) {
-            Settings.setServer(OBSERVE_BASE_VALUES.get(), ENABLE_DUNGEON_DIFFICULTY.get(), DEBUG_LOGGING.get(), CACHE_DROPS.get());
+            int minimumDropTrials = MINIMUM_DROP_TRIALS.get();
+            int maximumDropTrials = MAXIMUM_DROP_TRIALS.get();
+            if (maximumDropTrials < minimumDropTrials) {
+                Constants.LOGGER.warn("maximumDropTrials ({}) is lower than minimumDropTrials ({}); using {} for both",
+                        maximumDropTrials, minimumDropTrials, minimumDropTrials);
+                maximumDropTrials = minimumDropTrials;
+            }
+            Settings.setServer(OBSERVE_BASE_VALUES.get(), ENABLE_DUNGEON_DIFFICULTY.get(), DEBUG_LOGGING.get(), CACHE_DROPS.get(),
+                    minimumDropTrials, maximumDropTrials);
         }
     }
 
-    // The config file is reloaded on another thread, the stats have to be recalculated on the server thread.
-    // The drops do not depend on any server option, so they are not requeued here.
+    // The config file is reloaded on another thread, calculations have to be restarted on the server thread.
     private static void recalculateLater() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
-            server.execute(() -> StatsService.recalculateAndBroadcast(server));
+            server.execute(() -> {
+                StatsService.recalculateAndBroadcast(server);
+                DropsService.restart(server);
+            });
         }
     }
 }

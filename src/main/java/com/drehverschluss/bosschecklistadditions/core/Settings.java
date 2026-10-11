@@ -5,6 +5,9 @@ package com.drehverschluss.bosschecklistadditions.core;
  * depend on NeoForge. The defaults are used until a config file has been loaded.
  */
 public final class Settings {
+    public static final int DEFAULT_MINIMUM_DROP_TRIALS = 100;
+    public static final int DEFAULT_MAXIMUM_DROP_TRIALS = 300;
+
     private static volatile boolean hideMissingEntities = true;
     private static volatile boolean replaceStats = true;
     private static volatile boolean showPackInfoTab = true;
@@ -14,6 +17,8 @@ public final class Settings {
     private static volatile boolean enableDungeonDifficulty = true;
     private static volatile boolean debugLogging = false;
     private static volatile boolean cacheDrops = true;
+    private static volatile int minimumDropTrials = DEFAULT_MINIMUM_DROP_TRIALS;
+    private static volatile int maximumDropTrials = DEFAULT_MAXIMUM_DROP_TRIALS;
 
     private Settings() {
     }
@@ -50,6 +55,14 @@ public final class Settings {
         return cacheDrops;
     }
 
+    public static int minimumDropTrials() {
+        return minimumDropTrials;
+    }
+
+    public static int maximumDropTrials() {
+        return maximumDropTrials;
+    }
+
     public static void setClient(boolean hideMissingEntities, boolean replaceStats, boolean showPackInfoTab, boolean replaceDrops) {
         Settings.hideMissingEntities = hideMissingEntities;
         Settings.replaceStats = replaceStats;
@@ -57,10 +70,13 @@ public final class Settings {
         Settings.replaceDrops = replaceDrops;
     }
 
-    public static void setServer(boolean observeBaseValues, boolean enableDungeonDifficulty, boolean debugLogging, boolean cacheDrops) {
+    public static void setServer(boolean observeBaseValues, boolean enableDungeonDifficulty, boolean debugLogging, boolean cacheDrops,
+            int minimumDropTrials, int maximumDropTrials) {
         Settings.observeBaseValues = observeBaseValues;
         Settings.enableDungeonDifficulty = enableDungeonDifficulty;
         Settings.debugLogging = debugLogging;
         Settings.cacheDrops = cacheDrops;
+        Settings.minimumDropTrials = minimumDropTrials;
+        Settings.maximumDropTrials = maximumDropTrials;
     }
 }

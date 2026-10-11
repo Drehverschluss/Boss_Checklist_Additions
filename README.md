@@ -28,7 +28,7 @@ _Screenshot: Pack Info tab of a boss with a level range (placeholder)_
 ## Installation
 
 1. Install NeoForge 1.21.1 and [Boss Checklist](https://www.curseforge.com/minecraft/mc-mods/boss-checklist) 5.3.x.
-2. Put `boss_checklist_additions-0.2.0.jar` into the `mods` folder of the **server and of every client**.
+2. Put `boss_checklist_additions-0.2.1.jar` into the `mods` folder of the **server and of every client**.
 3. Optional: install Dynamic Difficulty and/or Dungeon Difficulty to get their values and zones.
 
 | Mod | Version | Needed |
@@ -75,8 +75,11 @@ Server (`boss_checklist_additions-server.toml`, in the world's `serverconfig` fo
 | `enableDungeonDifficulty` | `true` | Include the zone and the attribute modifiers of Dungeon Difficulty. |
 | `debugLogging` | `false` | Write additional information about the calculation to the log. |
 | `cacheDrops` | `true` | Save simulated drops to the world and reuse them while mods, datapacks and loot tables stay the same. `false` always simulates again. |
+| `minimumDropTrials` | `100` | Minimum number of simulated kills per boss before the result may be considered stable. |
+| `maximumDropTrials` | `300` | Maximum number of simulated kills per boss. Values below the minimum use the minimum for both. |
 
-Changing a server option while the game is running recalculates the stats.
+Changing a server option while the game is running recalculates the stats and restarts the drop simulation. Changing either trial count invalidates
+cached results so they are simulated again.
 
 ## For modpack developers
 
@@ -225,6 +228,8 @@ Permission level 2.
 - Dungeon Difficulty has no API. The addon uses its classes directly and rebuilds the zone resolution for a boss without a world position,
   so the supported versions are limited (3.9.x). A single player gets no per-player bonus.
 - The simulated drop chances are an approximation from 100–300 runs, not calculated probabilities, and assume a solo kill without Looting.
+- The simulated boss and the simulated player are placed near the world spawn (or next to a player), in a loaded chunk without structures, so
+  location-based loot modifiers such as Dungeon Difficulty's item scaling see open land. This only changes item attributes, not which items drop.
 - Drops a mod hands out from its own code instead of through a loot table (e.g. the Wither's Nether Star, or the `endrem:blossom_eye` Endrem Additions
   adds to `bosses_of_mass_destruction:void_blossom`) cannot be simulated; Boss Checklist's own entry for them is kept, with a `?` label.
 - Drops that depend on the player (e.g. Apotheosis gems scaling with a world tier) are simulated with a default player and are only a rough estimate.
@@ -262,7 +267,7 @@ They are added to the dev runs only.
 12. **Live update:** load the world, open the boss book right away and leave a boss further down the Drops tab open; the list updates by itself,
     without reopening it, once that boss's simulation finishes.
 13. **Reload:** `/reload` should not error, and the drops come back after a short while.
-14. **No addon / old addon client:** a dedicated server on 0.2.0 with a client that has no addon, or still has 0.1.0 (different protocol version),
+14. **No addon / old addon client:** a dedicated server on 0.2.1 with a client that has no addon, or still has 0.1.0 (different protocol version),
     joins and stays connected through a `/reload`: no error, no crash, that client just sees Boss Checklist's original values.
 15. **No loot table:** Ossukage (a sword that is only given in code, no loot table) keeps Boss Checklist's original list unchanged.
 16. **Pack file override:** a pack file for Obsidilith with `"loot_tables": ["bosses_of_mass_destruction:chests/obsidilith"]`, then `/reload`:

@@ -34,5 +34,7 @@
   "boss_checklist_additions.configuration.observeBaseValues": "Basiswerte beobachten",
   "boss_checklist_additions.configuration.enableDungeonDifficulty": "Dungeon Difficulty einrechnen",
   "boss_checklist_additions.configuration.debugLogging": "Debug-Logging",
-  "boss_checklist_additions.configuration.cacheDrops": "Boss-Drops zwischenspeichern"
+  "boss_checklist_additions.configuration.cacheDrops": "Boss-Drops zwischenspeichern",
+  "boss_checklist_additions.configuration.minimumDropTrials": "Minimale Drop-Durchläufe",
+  "boss_checklist_additions.configuration.maximumDropTrials": "Maximale Drop-Durchläufe"
 }
