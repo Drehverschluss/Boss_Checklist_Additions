@@ -1,6 +1,7 @@
 package com.drehverschluss.bosschecklistadditions.client;
 
 import com.drehverschluss.bosschecklistadditions.core.BossStats;
+import com.drehverschluss.bosschecklistadditions.core.Settings;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -24,12 +25,18 @@ public final class StatsText {
                 StatFormat.decimal(stats.armorMin(), stats.armorMax()), StatFormat.decimal(stats.baseArmor(), stats.baseArmor()));
     }
 
-    /** "Lvl 120 · Solo", "Solo", each with " · Dungeon 3" if a Dungeon Difficulty zone changes the boss. */
+    /**
+     * "Lvl 120 · Solo", "Solo", each with " · Dungeon 3" if a Dungeon Difficulty zone changes the boss, and
+     * " · Tier 7" (in the tier's own color) if the pack gives this boss a tier and showTier is on.
+     */
     public static Component levelAndSolo(BossStats stats) {
         MutableComponent text = stats.hasLevel()
                 ? Component.translatable("tooltip.boss_checklist_additions.level_solo", StatFormat.level(stats))
                 : Component.translatable("tooltip.boss_checklist_additions.solo");
         stats.zone().filter(zone -> zone.scalesEntity()).ifPresent(zone -> text.append(" \u00b7 ").append(NameLookup.zone(zone)));
+        if (Settings.showTier()) {
+            stats.tier().ifPresent(tier -> TierDisplay.appendTier(text, tier, ClientBossStatsCache.maxTier()));
+        }
         return text.withStyle(ChatFormatting.GRAY);
     }
 

@@ -12,6 +12,7 @@ public final class Settings {
     private static volatile boolean replaceStats = true;
     private static volatile boolean showPackInfoTab = true;
     private static volatile boolean replaceDrops = true;
+    private static volatile boolean showTier = true;
 
     private static volatile boolean observeBaseValues = true;
     private static volatile boolean enableDungeonDifficulty = true;
@@ -39,6 +40,11 @@ public final class Settings {
         return replaceDrops;
     }
 
+    /** Whether the tier of a boss (if its pack file sets one) is shown at all. */
+    public static boolean showTier() {
+        return showTier;
+    }
+
     public static boolean observeBaseValues() {
         return observeBaseValues;
     }
@@ -63,11 +69,12 @@ public final class Settings {
         return maximumDropTrials;
     }
 
-    public static void setClient(boolean hideMissingEntities, boolean replaceStats, boolean showPackInfoTab, boolean replaceDrops) {
+    public static void setClient(boolean hideMissingEntities, boolean replaceStats, boolean showPackInfoTab, boolean replaceDrops, boolean showTier) {
         Settings.hideMissingEntities = hideMissingEntities;
         Settings.replaceStats = replaceStats;
         Settings.showPackInfoTab = showPackInfoTab;
         Settings.replaceDrops = replaceDrops;
+        Settings.showTier = showTier;
     }
 
     public static void setServer(boolean observeBaseValues, boolean enableDungeonDifficulty, boolean debugLogging, boolean cacheDrops,

@@ -12,6 +12,7 @@ import com.drehverschluss.bosschecklistadditions.core.BossStats;
 public final class ClientBossStatsCache {
     private static volatile Map<String, BossStats> stats = Map.of();
     private static volatile boolean serverData;
+    private static volatile int maxTier;
 
     private ClientBossStatsCache() {
     }
@@ -26,13 +27,19 @@ public final class ClientBossStatsCache {
         return serverData;
     }
 
-    public static void replaceAll(List<BossStats> entries) {
+    /** The highest tier used by any boss, as sent by the server. 0 if no pack file sets a tier (or no server data yet). */
+    public static int maxTier() {
+        return maxTier;
+    }
+
+    public static void replaceAll(List<BossStats> entries, int maxTier) {
         Map<String, BossStats> map = new HashMap<>();
         for (BossStats entry : entries) {
             map.put(entry.entityId(), entry);
         }
         stats = Map.copyOf(map);
         serverData = true;
+        ClientBossStatsCache.maxTier = maxTier;
     }
 
     public static void update(List<BossStats> entries) {
@@ -46,5 +53,6 @@ public final class ClientBossStatsCache {
     public static void clear() {
         stats = Map.of();
         serverData = false;
+        maxTier = 0;
     }
 }

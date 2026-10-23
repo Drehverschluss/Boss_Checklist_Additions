@@ -31,6 +31,11 @@ public final class AdditionsConfig {
             .translation("boss_checklist_additions.configuration.replaceDrops")
             .define("replaceDrops", true);
 
+    private static final ModConfigSpec.BooleanValue SHOW_TIER = CLIENT_BUILDER
+            .comment("Show the tier of a boss (Pack Info tab, stats tooltip, boss list tooltip) if its pack file sets one.")
+            .translation("boss_checklist_additions.configuration.showTier")
+            .define("showTier", true);
+
     public static final ModConfigSpec CLIENT_SPEC = CLIENT_BUILDER.build();
 
     private static final ModConfigSpec.Builder SERVER_BUILDER = new ModConfigSpec.Builder();
@@ -86,7 +91,7 @@ public final class AdditionsConfig {
 
     private static void apply(Object spec) {
         if (spec == CLIENT_SPEC) {
-            Settings.setClient(HIDE_MISSING_ENTITIES.get(), REPLACE_STATS.get(), SHOW_PACK_INFO_TAB.get(), REPLACE_DROPS.get());
+            Settings.setClient(HIDE_MISSING_ENTITIES.get(), REPLACE_STATS.get(), SHOW_PACK_INFO_TAB.get(), REPLACE_DROPS.get(), SHOW_TIER.get());
         } else if (spec == SERVER_SPEC) {
             int minimumDropTrials = MINIMUM_DROP_TRIALS.get();
             int maximumDropTrials = MAXIMUM_DROP_TRIALS.get();

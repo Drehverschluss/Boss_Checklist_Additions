@@ -151,7 +151,8 @@ public final class BossStatsCalculator {
                     base.hp(), base.armor(), base.attack(), source,
                     dungeonResult != null ? dungeonResult.approximateMask() : 0,
                     bossLocation,
-                    Optional.ofNullable(dungeonResult).map(DungeonResult::zone));
+                    Optional.ofNullable(dungeonResult).map(DungeonResult::zone),
+                    pack == null ? Optional.empty() : pack.tier());
         } finally {
             entity.discard();
         }

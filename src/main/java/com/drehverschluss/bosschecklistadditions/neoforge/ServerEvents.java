@@ -53,7 +53,7 @@ public final class ServerEvents {
             return;
         }
         StatsService.recalculateAll(event.getPlayerList().getServer());
-        BossStatsPayload statsPayload = new BossStatsPayload(ServerBossStatsCache.get());
+        BossStatsPayload statsPayload = new BossStatsPayload(ServerBossStatsCache.get(), BossPackDataManager.maxTier());
         // Drops are requeued and trickle in via BossDropsUpdatePayload; players get the (possibly stale) snapshot now.
         BossDropsPayload dropsPayload = new BossDropsPayload(ServerBossDropsCache.get());
         event.getRelevantPlayers().forEach(player -> {

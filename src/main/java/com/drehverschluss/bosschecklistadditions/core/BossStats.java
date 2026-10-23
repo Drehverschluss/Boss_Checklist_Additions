@@ -19,7 +19,8 @@ public record BossStats(
         BaseSource baseSource,
         int approximateMask,
         Optional<BossLocation> location,
-        Optional<BossZone> zone) {
+        Optional<BossZone> zone,
+        Optional<Integer> tier) {
 
     public static final int APPROX_HEALTH = 1;
     public static final int APPROX_ARMOR = 2;
@@ -57,6 +58,7 @@ public record BossStats(
         buf.writeVarInt(approximateMask);
         buf.writeOptional(location, (out, value) -> value.write(out));
         buf.writeOptional(zone, (out, value) -> value.write(out));
+        buf.writeOptional(tier, FriendlyByteBuf::writeVarInt);
     }
 
     public static BossStats read(FriendlyByteBuf buf) {
@@ -70,6 +72,7 @@ public record BossStats(
                 BaseSource.byId(buf.readVarInt()),
                 buf.readVarInt(),
                 buf.readOptional(BossLocation::read),
-                buf.readOptional(BossZone::read));
+                buf.readOptional(BossZone::read),
+                buf.readOptional(FriendlyByteBuf::readVarInt));
     }
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.drehverschluss.bosschecklistadditions.core.BossPackDataManager;
 import com.drehverschluss.bosschecklistadditions.core.BossStats;
 import com.drehverschluss.bosschecklistadditions.core.BossStatsCalculator;
 import com.drehverschluss.bosschecklistadditions.core.Constants;
@@ -36,7 +37,7 @@ public final class StatsService {
 
     public static void recalculateAndBroadcast(MinecraftServer server) {
         recalculateAll(server);
-        Net.broadcast(server, new BossStatsPayload(ServerBossStatsCache.get()));
+        Net.broadcast(server, new BossStatsPayload(ServerBossStatsCache.get(), BossPackDataManager.maxTier()));
     }
 
     /** Recalculates one boss and updates the cache. Returns null if the boss has no stats (hidden, unknown, failed). */
@@ -48,7 +49,7 @@ public final class StatsService {
     }
 
     public static void sendAll(ServerPlayer player) {
-        Net.send(player, new BossStatsPayload(ServerBossStatsCache.get()));
+        Net.send(player, new BossStatsPayload(ServerBossStatsCache.get(), BossPackDataManager.maxTier()));
     }
 
     public static void broadcastUpdate(MinecraftServer server, List<BossStats> updated) {

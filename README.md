@@ -55,6 +55,8 @@ _Screenshot: Pack Info tab of a boss with a level range (placeholder)_
 - **Real drops:** The Drops tab of the boss info screen shows the real drops of the boss's actual loot table instead of Boss Checklist's static,
   hand-maintained list, each with the chance it was seen in a simulated kill (solo, no Looting), e.g. `73%` or `100%x2`. If the simulation finds no
   drops at all, Boss Checklist's own list is kept, since that can also mean the simulation could not run for this boss.
+- **Tiers:** A pack can give each boss a difficulty tier (`tier` in the pack file). If it does, the tier is shown at the top of the Pack Info tab,
+  appended to the `Lvl 120 · Solo` tooltip, and in a tooltip when hovering the entry in Boss Checklist's own boss list (see [Tiers](#tiers)).
 
 ## Configuration
 
@@ -66,6 +68,7 @@ Client (`boss_checklist_additions-client.toml`):
 | `replaceStats` | `true` | Show the pack values instead of the base values. |
 | `showPackInfoTab` | `true` | Show the Pack Info bookmark. The tooltip replacement stays. |
 | `replaceDrops` | `true` | Show the real, simulated loot table drops instead of Boss Checklist's own drop list. |
+| `showTier` | `true` | Show the tier of a boss (Pack Info tab, stats tooltip, boss list tooltip) if its pack file sets one. |
 
 Server (`boss_checklist_additions-server.toml`, in the world's `serverconfig` folder):
 
@@ -97,6 +100,7 @@ Only `entity` is required. If several files describe the same entity, the last o
 | `base_attributes` | Base values `max_health`, `armor`, `attack_damage`, each optional. |
 | `hidden` | `true`: no data is sent for this boss, Boss Checklist stays original and there is no tab. |
 | `loot_tables` | Simulate exactly these loot table ids instead of the entity's own one (see [Real drops](#real-drops)). A single id or a list. |
+| `tier` | Whole number, `1` or higher: the difficulty tier of this boss (see [Tiers](#tiers)). |
 | `quests` | Reserved. Accepted, but ignored. |
 
 A boss in a structure:
@@ -138,6 +142,41 @@ A boss that fills a reward chest on death instead of dropping items itself, so i
 ```json
 { "entity": "bosses_of_mass_destruction:obsidilith", "loot_tables": ["bosses_of_mass_destruction:chests/obsidilith"] }
 ```
+
+### Tiers
+
+A pack can give each boss a difficulty tier with the `tier` field: a whole number, `1` or higher. The addon itself does not know what the
+tiers of a pack mean or how many there are &ndash; that grouping (how many tiers, which boss goes in which one) is entirely up to the pack,
+the same as the location and base values. A pack using tiers 1-5 and one using 1-10 both just work, each against its own highest tier.
+
+Without a `tier` field a boss shows no tier at all; the game behaves exactly as before.
+
+A boss with a tier:
+
+```json
+{
+  "entity": "cataclysm:ignis",
+  "dimension": "minecraft:the_nether",
+  "location": { "type": "structure", "id": "cataclysm:burning_arena" },
+  "tier": 7
+}
+```
+
+The tier is shown (if the client's `showTier` option is on) at the top of the Pack Info tab, appended to the `Lvl 120 · Solo` tooltip, and in a
+tooltip when hovering the entry in Boss Checklist's own boss list (together with the boss's full name, the same way a shortened name there
+already gets a tooltip of its own).
+
+By default a tier is just named "Tier `<n>`", colored automatically from green (lowest tier) over yellow, orange and red to a fixed violet
+(highest tier). A pack can override both per tier with language keys, e.g. in `kubejs/assets/<namespace>/lang/en_us.json`:
+
+```json
+{
+  "boss_checklist_additions.tier.7": "Tier 7 \u00b7 Endgame",
+  "boss_checklist_additions.tier.7.color": "#C0392B"
+}
+```
+
+`boss_checklist_additions.tier.<n>.color` must be a `#rrggbb` hex color; an invalid value falls back to the automatic color.
 
 ### Base values
 
@@ -212,7 +251,7 @@ live once it does, without needing to reopen it.
 
 Permission level 2.
 
-- `/bcadditions dump`: all calculated bosses with level range, health, armor, attack, base values, source of the base values, location and zone.
+- `/bcadditions dump`: all calculated bosses with level range, health, armor, attack, base values, source of the base values, location, zone and tier.
 - `/bcadditions drops`: all simulated boss drops with their chance and amount.
 - `/bcadditions drops refresh`: discards the saved drops and simulates every boss again.
 - `/bcadditions observed`: the observed base values.

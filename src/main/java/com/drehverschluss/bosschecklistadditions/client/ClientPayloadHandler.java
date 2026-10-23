@@ -10,7 +10,7 @@ public final class ClientPayloadHandler {
     }
 
     public static void handle(BossStatsPayload payload) {
-        ClientBossStatsCache.replaceAll(payload.entries());
+        ClientBossStatsCache.replaceAll(payload.entries(), payload.maxTier());
     }
 
     public static void handleUpdate(BossStatsUpdatePayload payload) {

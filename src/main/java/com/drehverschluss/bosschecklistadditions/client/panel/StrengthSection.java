@@ -3,14 +3,18 @@ package com.drehverschluss.bosschecklistadditions.client.panel;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.drehverschluss.bosschecklistadditions.client.ClientBossStatsCache;
 import com.drehverschluss.bosschecklistadditions.client.StatFormat;
+import com.drehverschluss.bosschecklistadditions.client.TierDisplay;
 import com.drehverschluss.bosschecklistadditions.core.BossStats;
+import com.drehverschluss.bosschecklistadditions.core.Settings;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 
 /** Level, health, armor and attack (solo), each with its base value, and a small footer with the details. */
@@ -19,6 +23,7 @@ final class StrengthSection implements PanelSection {
     private static final int COLUMN_GAP = 6;
     private static final int TITLE_GAP = 2;
     private static final int FOOTER_GAP = 2;
+    private static final int TIER_GAP = 4;
     private static final String SEPARATOR = " \u00b7 ";
 
     private record Row(Component label, String value, String base) {
@@ -57,6 +62,17 @@ final class StrengthSection implements PanelSection {
         return stats.levelMin() == stats.levelMax()
                 ? Component.translatable("gui.boss_checklist_additions.level_fixed", stats.levelMax())
                 : Component.literal(StatFormat.level(stats));
+    }
+
+    private boolean showTierLine() {
+        return Settings.showTier() && stats.tier().isPresent();
+    }
+
+    // Bold, in the tier's own color (pack-provided name/color, or the automatic gradient from green to violet).
+    private Component tierText() {
+        int tier = stats.tier().orElseThrow();
+        int color = TierDisplay.color(tier, ClientBossStatsCache.maxTier()) & 0xFFFFFF;
+        return TierDisplay.name(tier).copy().withStyle(style -> style.withBold(true).withColor(TextColor.fromRgb(color)));
     }
 
     // "Solo · Base: Pack · incl. Dungeon Difficulty"
@@ -113,7 +129,8 @@ final class StrengthSection implements PanelSection {
         List<Row> rows = rows();
         int valueX = labelColumn(font, rows, levelLabel);
 
-        int height = font.lineHeight + TITLE_GAP;
+        int height = showTierLine() ? font.lineHeight + TIER_GAP : 0;
+        height += font.lineHeight + TITLE_GAP;
         height += Math.max(font.lineHeight, font.wordWrapHeight(levelText(), width - valueX)) + 1;
         for (Row row : rows) {
             height += font.lineHeight + 1;
@@ -129,6 +146,11 @@ final class StrengthSection implements PanelSection {
         Component levelLabel = Component.translatable("gui.boss_checklist_additions.level");
         List<Row> rows = rows();
         int valueX = x + labelColumn(font, rows, levelLabel);
+
+        if (showTierLine()) {
+            graphics.drawString(font, tierText(), x, y, PackInfoPanel.COLOR_TEXT, false);
+            y += font.lineHeight + TIER_GAP;
+        }
 
         graphics.drawString(font, Component.translatable("gui.boss_checklist_additions.strength").withStyle(ChatFormatting.BOLD),
                 x, y, PackInfoPanel.COLOR_TEXT, false);

@@ -20,7 +20,8 @@ public record BossPackData(
         Optional<Location> location,
         Optional<BaseAttributes> baseAttributes,
         boolean hidden,
-        List<ResourceLocation> lootTables) {
+        List<ResourceLocation> lootTables,
+        Optional<Integer> tier) {
 
     // Accepts a single id or a list, so a pack author does not have to wrap a single override in brackets.
     private static final Codec<List<ResourceLocation>> LOOT_TABLES_CODEC = Codec.either(ResourceLocation.CODEC, ResourceLocation.CODEC.listOf())
@@ -33,7 +34,10 @@ public record BossPackData(
             Location.CODEC.optionalFieldOf("location").forGetter(BossPackData::location),
             BaseAttributes.CODEC.optionalFieldOf("base_attributes").forGetter(BossPackData::baseAttributes),
             Codec.BOOL.optionalFieldOf("hidden", false).forGetter(BossPackData::hidden),
-            LOOT_TABLES_CODEC.optionalFieldOf("loot_tables", List.of()).forGetter(BossPackData::lootTables))
+            LOOT_TABLES_CODEC.optionalFieldOf("loot_tables", List.of()).forGetter(BossPackData::lootTables),
+            // Invalid values (< 1, not a whole number) are removed from the JSON before this codec ever sees them,
+            // see BossPackDataManager.sanitizeTier(). This field alone must never fail the rest of the file.
+            Codec.INT.optionalFieldOf("tier").forGetter(BossPackData::tier))
             .apply(instance, BossPackData::new));
 
     public record Location(LocationType type, Optional<ResourceLocation> id) {

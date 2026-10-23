@@ -140,14 +140,15 @@ public final class DebugCommand {
     private static String format(BossStats s) {
         String level = !s.hasLevel() ? "-" : s.levelMin() == s.levelMax() ? String.valueOf(s.levelMin()) : s.levelMin() + "-" + s.levelMax();
         String approx = s.approximateMask() != 0 ? "~" : "";
-        return String.format("%s | Lvl %s | HP %s%s | Armor %s | Atk %s | Base %s / %s / %s (%s) | %s | %s | DD %s",
+        return String.format("%s | Lvl %s | HP %s%s | Armor %s | Atk %s | Base %s / %s / %s (%s) | %s | %s | DD %s | Tier %s",
                 s.entityId(), level,
                 approx, range(s.hpMin(), s.hpMax()), range(s.armorMin(), s.armorMax()), range(s.attackMin(), s.attackMax()),
                 number(s.baseHp()), number(s.baseArmor()), number(s.baseAttack()), s.baseSource(),
                 s.location().map(DebugCommand::location).orElse("no location"),
                 s.zone().map(zone -> String.format("Zone %s %d (entity %d, loot %s)", zone.typeKey(), zone.level(), zone.entityLevel(),
                         zone.allowLoot() ? String.valueOf(zone.rewardLevel()) : "-")).orElse("no zone"),
-                s.dungeonScaled() ? "applied" : "not applied");
+                s.dungeonScaled() ? "applied" : "not applied",
+                s.tier().map(String::valueOf).orElse("-"));
     }
 
     private static String format(BossDrops drops) {

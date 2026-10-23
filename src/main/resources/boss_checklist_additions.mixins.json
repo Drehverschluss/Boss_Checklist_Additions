@@ -8,7 +8,8 @@
   ],
   "client": [
     "client.BossInfoScreenMixin",
-    "client.BossRegistryMixin"
+    "client.BossRegistryMixin",
+    "client.CustomCheckboxMixin"
   ],
   "injectors": {
     "defaultRequire": 0
